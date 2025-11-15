@@ -128,7 +128,7 @@ Track:
 ## 8.1 System Architecture
 ```mermaid
 flowchart LR
-    AdminApp["Flutter Admin App"] -->|REST API (JWT)| API["Node.js Backend API"]
+    AdminApp["Flutter Admin App"] -->|REST API - JWT| API["Node.js Backend API"]
     API --> DB[(MongoDB - Shared)]
     API --> S3[(S3 Storage)]
     API --> Redis[(Redis Cache)]
