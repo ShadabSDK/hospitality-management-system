@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: hospitality_mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: hospitality-saas
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - hospitality-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: hospitality_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - hospitality-network
+
+  api:
+    build: .
+    container_name: hospitality_api
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      MONGODB_URI: mongodb://mongodb:27017/hospitality-saas
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: your-super-secret-jwt-key
+      STRIPE_PUBLIC_KEY: pk_test_xxxx
+      STRIPE_SECRET_KEY: sk_test_xxxx
+      AWS_S3_BUCKET: hospitality-saas-uploads
+      APP_URL: http://localhost:5000
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+    networks:
+      - hospitality-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  hospitality-network:
+    driver: bridge
