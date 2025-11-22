@@ -1,48 +1,75 @@
-const Restaurant = require('../models/Restaurant');
+const initModels = require('../models');
+const { Op } = require('sequelize');
 
 class RestaurantRepository {
+  constructor() {
+    this.models = null;
+  }
+
+  getModels() {
+    if (!this.models) {
+      this.models = initModels();
+    }
+    return this.models;
+  }
+
   async create(data) {
+    const { Restaurant } = this.getModels();
     return await Restaurant.create(data);
   }
 
   async findById(id) {
-    return await Restaurant.findById(id);
+    const { Restaurant } = this.getModels();
+    return await Restaurant.findByPk(id);
   }
 
   async findBySlug(slug) {
-    return await Restaurant.findOne({ slug });
+    const { Restaurant } = this.getModels();
+    return await Restaurant.findOne({ where: { slug } });
   }
 
   async findByTenantId(tenantId) {
-    return await Restaurant.find({ tenantId });
+    const { Restaurant } = this.getModels();
+    return await Restaurant.findAll({ where: { tenantId } });
   }
 
   async findByTenantIdAndId(tenantId, id) {
-    return await Restaurant.findOne({ _id: id, tenantId });
+    const { Restaurant } = this.getModels();
+    return await Restaurant.findOne({ where: { id, tenantId } });
   }
 
   async update(id, data) {
-    return await Restaurant.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    const { Restaurant } = this.getModels();
+    const [updatedRowsCount] = await Restaurant.update(data, { 
+      where: { id },
+      returning: true 
+    });
+    if (updatedRowsCount === 0) return null;
+    return await Restaurant.findByPk(id);
   }
 
   async updateByTenantId(tenantId, id, data) {
-    return await Restaurant.findOneAndUpdate(
-      { _id: id, tenantId },
-      data,
-      { new: true, runValidators: true }
-    );
+    const { Restaurant } = this.getModels();
+    const [updatedRowsCount] = await Restaurant.update(data, { 
+      where: { id, tenantId },
+      returning: true 
+    });
+    if (updatedRowsCount === 0) return null;
+    return await Restaurant.findByPk(id);
   }
 
   async delete(id) {
-    return await Restaurant.findByIdAndDelete(id);
+    const { Restaurant } = this.getModels();
+    return await Restaurant.destroy({ where: { id } });
   }
 
   async checkSlugExists(slug, excludeId = null) {
-    const query = { slug };
+    const { Restaurant } = this.getModels();
+    const where = { slug };
     if (excludeId) {
-      query._id = { $ne: excludeId };
+      where.id = { [Op.ne]: excludeId };
     }
-    return await Restaurant.findOne(query);
+    return await Restaurant.findOne({ where });
   }
 }
 

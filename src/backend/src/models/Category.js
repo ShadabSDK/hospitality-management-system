@@ -1,54 +1,69 @@
-const mongoose = require('mongoose');
-
-const categorySchema = new mongoose.Schema(
-  {
+module.exports = (sequelize, DataTypes) => {
+  const Category = sequelize.define('Category', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     restaurantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Restaurant',
-      required: [true, 'Restaurant ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'restaurants',
+        key: 'id',
+      },
     },
     tenantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tenant',
-      required: [true, 'Tenant ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'tenants',
+        key: 'id',
+      },
     },
     name: {
-      type: String,
-      required: [true, 'Category name is required'],
-      trim: true,
-      maxlength: [100, 'Category name cannot exceed 100 characters'],
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: {
+        notEmpty: {
+          msg: 'Category name is required',
+        },
+        len: {
+          args: [1, 100],
+          msg: 'Category name cannot exceed 100 characters',
+        },
+      },
     },
     displayOrder: {
-      type: Number,
-      default: 0,
-      min: [0, 'Display order must be non-negative'],
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      validate: {
+        min: {
+          args: [0],
+          msg: 'Display order must be non-negative',
+        },
+      },
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
-  },
-  {
+  }, {
+    tableName: 'categories',
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
-);
+    indexes: [
+      {
+        fields: ['restaurantId', 'displayOrder'],
+      },
+      {
+        fields: ['tenantId'],
+      },
+      {
+        fields: ['restaurantId', 'isActive'],
+      },
+    ],
+  });
 
-// Indexes
-categorySchema.index({ restaurantId: 1, displayOrder: 1 });
-categorySchema.index({ tenantId: 1 });
-categorySchema.index({ restaurantId: 1, isActive: 1 });
-
-// Virtual for dishes
-categorySchema.virtual('dishes', {
-  ref: 'Dish',
-  localField: '_id',
-  foreignField: 'categoryId',
-  match: { isAvailable: true },
-});
-
-module.exports = mongoose.model('Category', categorySchema);
+  return Category;
+};
 

@@ -6,9 +6,15 @@ module.exports = {
   port: process.env.PORT || 3000,
   apiVersion: process.env.API_VERSION || 'v1',
   
-  // MongoDB
-  mongodb: {
-    uri: process.env.MONGODB_URI || process.env.MONGODB_URI_ATLAS || 'mongodb://localhost:27017/hospitality-management',
+  // PostgreSQL
+  database: {
+    url: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/hospitality_management',
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    name: process.env.DB_NAME || 'hospitality_management',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'password',
+    ssl: process.env.DB_SSL === 'true',
   },
   
   // JWT

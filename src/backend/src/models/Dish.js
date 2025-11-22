@@ -1,71 +1,108 @@
-const mongoose = require('mongoose');
-
-const dishSchema = new mongoose.Schema(
-  {
+module.exports = (sequelize, DataTypes) => {
+  const Dish = sequelize.define('Dish', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     restaurantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Restaurant',
-      required: [true, 'Restaurant ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'restaurants',
+        key: 'id',
+      },
     },
     categoryId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
-      required: [true, 'Category ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'categories',
+        key: 'id',
+      },
     },
     tenantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tenant',
-      required: [true, 'Tenant ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'tenants',
+        key: 'id',
+      },
     },
     name: {
-      type: String,
-      required: [true, 'Dish name is required'],
-      trim: true,
-      maxlength: [100, 'Dish name cannot exceed 100 characters'],
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: {
+        notEmpty: {
+          msg: 'Dish name is required',
+        },
+        len: {
+          args: [1, 100],
+          msg: 'Dish name cannot exceed 100 characters',
+        },
+      },
     },
     description: {
-      type: String,
-      trim: true,
-      maxlength: [500, 'Description cannot exceed 500 characters'],
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      validate: {
+        len: {
+          args: [0, 500],
+          msg: 'Description cannot exceed 500 characters',
+        },
+      },
     },
     price: {
-      type: Number,
-      required: [true, 'Price is required'],
-      min: [0, 'Price must be non-negative'],
-      get: function(value) {
-        return parseFloat(value.toFixed(2));
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      validate: {
+        min: {
+          args: [0],
+          msg: 'Price must be non-negative',
+        },
+      },
+      get() {
+        const value = this.getDataValue('price');
+        return value ? parseFloat(value) : 0;
       },
     },
     imageUrl: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     isAvailable: {
-      type: Boolean,
-      default: true,
-      index: true,
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
     displayOrder: {
-      type: Number,
-      default: 0,
-      min: [0, 'Display order must be non-negative'],
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      validate: {
+        min: {
+          args: [0],
+          msg: 'Display order must be non-negative',
+        },
+      },
     },
-  },
-  {
+  }, {
+    tableName: 'dishes',
     timestamps: true,
-    toJSON: { virtuals: true, getters: true },
-    toObject: { virtuals: true, getters: true },
-  }
-);
+    indexes: [
+      {
+        fields: ['restaurantId', 'categoryId', 'displayOrder'],
+      },
+      {
+        fields: ['tenantId'],
+      },
+      {
+        fields: ['restaurantId', 'isAvailable'],
+      },
+      {
+        fields: ['categoryId', 'isAvailable'],
+      },
+    ],
+  });
 
-// Indexes
-dishSchema.index({ restaurantId: 1, categoryId: 1, displayOrder: 1 });
-dishSchema.index({ tenantId: 1 });
-dishSchema.index({ restaurantId: 1, isAvailable: 1 });
-dishSchema.index({ categoryId: 1, isAvailable: 1 });
-
-module.exports = mongoose.model('Dish', dishSchema);
+  return Dish;
+};
 

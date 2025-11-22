@@ -1,83 +1,108 @@
-const mongoose = require('mongoose');
 const { generateSlug } = require('../utils/helpers');
 
-const restaurantSchema = new mongoose.Schema(
-  {
+module.exports = (sequelize, DataTypes) => {
+  const Restaurant = sequelize.define('Restaurant', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     tenantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tenant',
-      required: [true, 'Tenant ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'tenants',
+        key: 'id',
+      },
     },
     name: {
-      type: String,
-      required: [true, 'Restaurant name is required'],
-      trim: true,
-      maxlength: [100, 'Restaurant name cannot exceed 100 characters'],
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: {
+        notEmpty: {
+          msg: 'Restaurant name is required',
+        },
+        len: {
+          args: [1, 100],
+          msg: 'Restaurant name cannot exceed 100 characters',
+        },
+      },
     },
     slug: {
-      type: String,
-      required: [true, 'Slug is required'],
+      type: DataTypes.STRING,
+      allowNull: false,
       unique: true,
-      lowercase: true,
-      trim: true,
-      match: [/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Invalid slug format'],
-      index: true,
+      validate: {
+        is: {
+          args: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+          msg: 'Invalid slug format',
+        },
+      },
     },
     description: {
-      type: String,
-      trim: true,
-      maxlength: [500, 'Description cannot exceed 500 characters'],
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      validate: {
+        len: {
+          args: [0, 500],
+          msg: 'Description cannot exceed 500 characters',
+        },
+      },
     },
     logoUrl: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
-  },
-  {
+  }, {
+    tableName: 'restaurants',
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
-);
+    indexes: [
+      {
+        unique: true,
+        fields: ['slug'],
+      },
+      {
+        fields: ['tenantId'],
+      },
+      {
+        fields: ['tenantId', 'isActive'],
+      },
+    ],
+    hooks: {
+      beforeCreate: async (restaurant) => {
+        if (!restaurant.slug && restaurant.name) {
+          restaurant.slug = generateSlug(restaurant.name);
+          
+          // Ensure uniqueness
+          const existing = await Restaurant.findOne({ where: { slug: restaurant.slug } });
+          if (existing) {
+            restaurant.slug = `${restaurant.slug}-${Date.now()}`;
+          }
+        }
+      },
+      beforeUpdate: async (restaurant) => {
+        if (restaurant.changed('name') && !restaurant.changed('slug')) {
+          restaurant.slug = generateSlug(restaurant.name);
+          
+          // Ensure uniqueness
+          const existing = await Restaurant.findOne({ 
+            where: { 
+              slug: restaurant.slug,
+              id: { [sequelize.Sequelize.Op.ne]: restaurant.id }
+            } 
+          });
+          if (existing) {
+            restaurant.slug = `${restaurant.slug}-${Date.now()}`;
+          }
+        }
+      },
+    },
+  });
 
-// Indexes
-restaurantSchema.index({ slug: 1 }, { unique: true });
-restaurantSchema.index({ tenantId: 1 });
-restaurantSchema.index({ tenantId: 1, isActive: 1 });
-
-// Generate slug from name if not provided
-restaurantSchema.pre('save', async function(next) {
-  if (!this.slug && this.name) {
-    this.slug = generateSlug(this.name);
-    
-    // Ensure uniqueness
-    const existing = await mongoose.model('Restaurant').findOne({ slug: this.slug });
-    if (existing && existing._id.toString() !== this._id.toString()) {
-      this.slug = `${this.slug}-${Date.now()}`;
-    }
-  }
-  next();
-});
-
-// Virtual for categories
-restaurantSchema.virtual('categories', {
-  ref: 'Category',
-  localField: '_id',
-  foreignField: 'restaurantId',
-});
-
-// Virtual for dishes count
-restaurantSchema.virtual('dishesCount', {
-  ref: 'Dish',
-  localField: '_id',
-  foreignField: 'restaurantId',
-  count: true,
-});
-
-module.exports = mongoose.model('Restaurant', restaurantSchema);
+  return Restaurant;
+};
 

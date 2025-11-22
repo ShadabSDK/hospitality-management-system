@@ -1,40 +1,54 @@
-const mongoose = require('mongoose');
-
-const qrCodeSchema = new mongoose.Schema(
-  {
+module.exports = (sequelize, DataTypes) => {
+  const QRCode = sequelize.define('QRCode', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     restaurantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Restaurant',
-      required: [true, 'Restaurant ID is required'],
+      type: DataTypes.UUID,
+      allowNull: false,
       unique: true, // One QR code per restaurant
-      index: true,
+      references: {
+        model: 'restaurants',
+        key: 'id',
+      },
     },
     tenantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tenant',
-      required: [true, 'Tenant ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'tenants',
+        key: 'id',
+      },
     },
     url: {
-      type: String,
-      required: [true, 'URL is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: {
+          msg: 'URL is required',
+        },
+      },
     },
     qrImageUrl: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: true,
     },
-  },
-  {
+  }, {
+    tableName: 'qr_codes',
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
-);
+    indexes: [
+      {
+        unique: true,
+        fields: ['restaurantId'],
+      },
+      {
+        fields: ['tenantId'],
+      },
+    ],
+  });
 
-// Indexes
-qrCodeSchema.index({ restaurantId: 1 }, { unique: true });
-qrCodeSchema.index({ tenantId: 1 });
-
-module.exports = mongoose.model('QRCode', qrCodeSchema);
+  return QRCode;
+};
 

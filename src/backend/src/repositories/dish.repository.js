@@ -1,59 +1,94 @@
-const Dish = require('../models/Dish');
+const initModels = require('../models');
 
 class DishRepository {
+  constructor() {
+    this.models = null;
+  }
+
+  getModels() {
+    if (!this.models) {
+      this.models = initModels();
+    }
+    return this.models;
+  }
+
   async create(data) {
+    const { Dish } = this.getModels();
     return await Dish.create(data);
   }
 
   async findById(id) {
-    return await Dish.findById(id);
+    const { Dish } = this.getModels();
+    return await Dish.findByPk(id);
   }
 
   async findByCategoryId(categoryId) {
-    return await Dish.find({ categoryId, isAvailable: true })
-      .sort({ displayOrder: 1 });
+    const { Dish } = this.getModels();
+    return await Dish.findAll({ 
+      where: { categoryId, isAvailable: true },
+      order: [['displayOrder', 'ASC']]
+    });
   }
 
   async findByRestaurantId(restaurantId) {
-    return await Dish.find({ restaurantId, isAvailable: true })
-      .sort({ displayOrder: 1 });
+    const { Dish } = this.getModels();
+    return await Dish.findAll({ 
+      where: { restaurantId, isAvailable: true },
+      order: [['displayOrder', 'ASC']]
+    });
   }
 
   async findByTenantIdAndId(tenantId, id) {
-    return await Dish.findOne({ _id: id, tenantId });
+    const { Dish } = this.getModels();
+    return await Dish.findOne({ where: { id, tenantId } });
   }
 
   async findByRestaurantIdAndCategoryId(restaurantId, categoryId) {
-    return await Dish.find({ restaurantId, categoryId, isAvailable: true })
-      .sort({ displayOrder: 1 });
+    const { Dish } = this.getModels();
+    return await Dish.findAll({ 
+      where: { restaurantId, categoryId, isAvailable: true },
+      order: [['displayOrder', 'ASC']]
+    });
   }
 
   async update(id, data) {
-    return await Dish.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    const { Dish } = this.getModels();
+    const [updatedRowsCount] = await Dish.update(data, { 
+      where: { id },
+      returning: true 
+    });
+    if (updatedRowsCount === 0) return null;
+    return await Dish.findByPk(id);
   }
 
   async updateByTenantId(tenantId, id, data) {
-    return await Dish.findOneAndUpdate(
-      { _id: id, tenantId },
-      data,
-      { new: true, runValidators: true }
-    );
+    const { Dish } = this.getModels();
+    const [updatedRowsCount] = await Dish.update(data, { 
+      where: { id, tenantId },
+      returning: true 
+    });
+    if (updatedRowsCount === 0) return null;
+    return await Dish.findByPk(id);
   }
 
   async delete(id) {
-    return await Dish.findByIdAndDelete(id);
+    const { Dish } = this.getModels();
+    return await Dish.destroy({ where: { id } });
   }
 
   async deleteByTenantId(tenantId, id) {
-    return await Dish.findOneAndDelete({ _id: id, tenantId });
+    const { Dish } = this.getModels();
+    return await Dish.destroy({ where: { id, tenantId } });
   }
 
   async toggleAvailability(id, isAvailable) {
-    return await Dish.findByIdAndUpdate(
-      id,
+    const { Dish } = this.getModels();
+    const [updatedRowsCount] = await Dish.update(
       { isAvailable },
-      { new: true }
+      { where: { id }, returning: true }
     );
+    if (updatedRowsCount === 0) return null;
+    return await Dish.findByPk(id);
   }
 }
 

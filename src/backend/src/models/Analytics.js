@@ -1,58 +1,75 @@
-const mongoose = require('mongoose');
 const { ANALYTICS_EVENTS } = require('../utils/constants');
 
-const analyticsSchema = new mongoose.Schema(
-  {
+module.exports = (sequelize, DataTypes) => {
+  const Analytics = sequelize.define('Analytics', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     tenantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tenant',
-      required: [true, 'Tenant ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'tenants',
+        key: 'id',
+      },
     },
     restaurantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Restaurant',
-      required: [true, 'Restaurant ID is required'],
-      index: true,
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'restaurants',
+        key: 'id',
+      },
     },
     eventType: {
-      type: String,
-      enum: Object.values(ANALYTICS_EVENTS),
-      required: [true, 'Event type is required'],
-      index: true,
+      type: DataTypes.ENUM(...Object.values(ANALYTICS_EVENTS)),
+      allowNull: false,
     },
-    metadata: {
-      dishId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Dish',
-      },
-      categoryId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category',
-      },
-      userAgent: {
-        type: String,
-      },
-      ipAddress: {
-        type: String,
+    dishId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'dishes',
+        key: 'id',
       },
     },
-  },
-  {
+    categoryId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'categories',
+        key: 'id',
+      },
+    },
+    userAgent: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    ipAddress: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+  }, {
+    tableName: 'analytics',
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
-);
+    indexes: [
+      {
+        fields: ['tenantId', 'createdAt'],
+      },
+      {
+        fields: ['restaurantId', 'eventType', 'createdAt'],
+      },
+      {
+        fields: ['eventType', 'createdAt'],
+      },
+      {
+        fields: ['dishId', 'createdAt'],
+      },
+    ],
+  });
 
-// Indexes for efficient queries
-analyticsSchema.index({ tenantId: 1, createdAt: -1 });
-analyticsSchema.index({ restaurantId: 1, eventType: 1, createdAt: -1 });
-analyticsSchema.index({ eventType: 1, createdAt: -1 });
-analyticsSchema.index({ 'metadata.dishId': 1, createdAt: -1 });
-
-// TTL index to auto-delete old analytics (optional - can be managed manually)
-// analyticsSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 }); // 30 days
-
-module.exports = mongoose.model('Analytics', analyticsSchema);
+  return Analytics;
+};
 

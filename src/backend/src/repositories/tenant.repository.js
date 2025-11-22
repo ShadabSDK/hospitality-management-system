@@ -1,28 +1,50 @@
-const Tenant = require('../models/Tenant');
+const initModels = require('../models');
 
 class TenantRepository {
+  constructor() {
+    this.models = null;
+  }
+
+  getModels() {
+    if (!this.models) {
+      this.models = initModels();
+    }
+    return this.models;
+  }
+
   async create(data) {
+    const { Tenant } = this.getModels();
     return await Tenant.create(data);
   }
 
   async findById(id) {
-    return await Tenant.findById(id);
+    const { Tenant } = this.getModels();
+    return await Tenant.findByPk(id);
   }
 
   async findByStripeCustomerId(stripeCustomerId) {
-    return await Tenant.findOne({ stripeCustomerId });
+    const { Tenant } = this.getModels();
+    return await Tenant.findOne({ where: { stripeCustomerId } });
   }
 
   async update(id, data) {
-    return await Tenant.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    const { Tenant } = this.getModels();
+    const [updatedRowsCount] = await Tenant.update(data, { 
+      where: { id },
+      returning: true 
+    });
+    if (updatedRowsCount === 0) return null;
+    return await Tenant.findByPk(id);
   }
 
   async updatePlan(id, plan) {
-    return await Tenant.findByIdAndUpdate(
-      id,
+    const { Tenant } = this.getModels();
+    const [updatedRowsCount] = await Tenant.update(
       { plan, trialEndsAt: null },
-      { new: true }
+      { where: { id }, returning: true }
     );
+    if (updatedRowsCount === 0) return null;
+    return await Tenant.findByPk(id);
   }
 }
 

@@ -1,39 +1,68 @@
-const AdminUser = require('../models/AdminUser');
+const initModels = require('../models');
 
 class UserRepository {
+  constructor() {
+    this.models = null;
+  }
+
+  getModels() {
+    if (!this.models) {
+      this.models = initModels();
+    }
+    return this.models;
+  }
+
   async create(data) {
+    const { AdminUser } = this.getModels();
     return await AdminUser.create(data);
   }
 
   async findById(id) {
-    return await AdminUser.findById(id).select('+password');
+    const { AdminUser } = this.getModels();
+    return await AdminUser.findByPk(id);
   }
 
   async findByEmail(email) {
-    return await AdminUser.findOne({ email: email.toLowerCase() }).select('+password');
+    const { AdminUser } = this.getModels();
+    return await AdminUser.findOne({ where: { email: email.toLowerCase() } });
   }
 
   async findByEmailAndTenant(email, tenantId) {
+    const { AdminUser } = this.getModels();
     return await AdminUser.findOne({ 
-      email: email.toLowerCase(), 
-      tenantId 
-    }).select('+password');
+      where: { 
+        email: email.toLowerCase(), 
+        tenantId 
+      }
+    });
   }
 
   async findByTenantId(tenantId) {
-    return await AdminUser.find({ tenantId });
+    const { AdminUser } = this.getModels();
+    return await AdminUser.findAll({ where: { tenantId } });
   }
 
   async update(id, data) {
-    return await AdminUser.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    const { AdminUser } = this.getModels();
+    const [updatedRowsCount] = await AdminUser.update(data, { 
+      where: { id },
+      returning: true 
+    });
+    if (updatedRowsCount === 0) return null;
+    return await AdminUser.findByPk(id);
   }
 
   async updateLastLogin(id) {
-    return await AdminUser.findByIdAndUpdate(id, { lastLogin: new Date() });
+    const { AdminUser } = this.getModels();
+    return await AdminUser.update(
+      { lastLogin: new Date() },
+      { where: { id } }
+    );
   }
 
   async delete(id) {
-    return await AdminUser.findByIdAndDelete(id);
+    const { AdminUser } = this.getModels();
+    return await AdminUser.destroy({ where: { id } });
   }
 }
 

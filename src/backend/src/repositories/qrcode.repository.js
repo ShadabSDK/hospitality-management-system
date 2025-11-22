@@ -1,28 +1,46 @@
-const QRCode = require('../models/QRCode');
+const initModels = require('../models');
 
 class QRCodeRepository {
+  constructor() {
+    this.models = null;
+  }
+
+  getModels() {
+    if (!this.models) {
+      this.models = initModels();
+    }
+    return this.models;
+  }
+
   async create(data) {
+    const { QRCode } = this.getModels();
     return await QRCode.create(data);
   }
 
   async findByRestaurantId(restaurantId) {
-    return await QRCode.findOne({ restaurantId });
+    const { QRCode } = this.getModels();
+    return await QRCode.findOne({ where: { restaurantId } });
   }
 
   async findByTenantIdAndRestaurantId(tenantId, restaurantId) {
-    return await QRCode.findOne({ tenantId, restaurantId });
+    const { QRCode } = this.getModels();
+    return await QRCode.findOne({ where: { tenantId, restaurantId } });
   }
 
   async update(restaurantId, data) {
-    return await QRCode.findOneAndUpdate(
-      { restaurantId },
-      data,
-      { new: true, runValidators: true, upsert: true }
-    );
+    const { QRCode } = this.getModels();
+    const [qrCode, created] = await QRCode.upsert({
+      ...data,
+      restaurantId
+    }, {
+      returning: true
+    });
+    return qrCode;
   }
 
   async delete(restaurantId) {
-    return await QRCode.findOneAndDelete({ restaurantId });
+    const { QRCode } = this.getModels();
+    return await QRCode.destroy({ where: { restaurantId } });
   }
 }
 

@@ -2,6 +2,7 @@ const app = require('./src/app');
 const config = require('./src/config');
 const { connectDB } = require('./src/config/database');
 const { connectRedis } = require('./src/config/redis');
+const initModels = require('./src/models');
 const logger = require('./src/utils/logger');
 
 // Handle unhandled promise rejections
@@ -19,8 +20,12 @@ process.on('uncaughtException', (err) => {
 // Start server
 const startServer = async () => {
   try {
-    // Connect to MongoDB
+    // Connect to PostgreSQL
     await connectDB();
+
+    // Initialize Sequelize models
+    const models = initModels();
+    logger.info('Database models initialized');
 
     // Connect to Redis (optional - app works without it)
     await connectRedis().catch((err) => {
@@ -30,6 +35,8 @@ const startServer = async () => {
     // Start server
     const server = app.listen(config.port, () => {
       logger.info(`Server running on port ${config.port} in ${config.env} mode`);
+      logger.info(`Database: PostgreSQL`);
+      logger.info(`API Documentation: http://localhost:${config.port}/api/v1/health`);
     });
 
     // Graceful shutdown
